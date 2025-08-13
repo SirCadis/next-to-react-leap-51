@@ -3,44 +3,12 @@ import { Button } from "@/components/ui/button";
 import { GraduationCap, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
-import { getActiveYearId, keyForYear } from "@/lib/years";
-import { getEnrollments } from "@/lib/students";
+import { getActiveYearId } from "@/lib/years";
+import { getEnrollments, getStudents, Student } from "@/lib/students";
+import { getClasses } from "@/lib/classes";
+import { getClassSubjects, saveClassSubjects, getGrades, saveGrades, Subject, ClassSubjects, Grade } from "@/lib/grades";
 
-interface Subject {
-  id: string;
-  name: string;
-  coefficient: number;
-  isOptional: boolean;
-  languageType?: "LV1" | "LV2" | null;
-  studentIds: string[];
-}
-
-interface ClassSubjects {
-  id: string;
-  classId: string;
-  semester: "premier" | "deuxieme";
-  subjects: Subject[];
-  createdAt: string;
-}
-
-interface Grade {
-  id: string;
-  studentId: string;
-  subjectId: string;
-  classId: string;
-  semester: "premier" | "deuxieme";
-  devoir1?: number;
-  devoir2?: number;
-  composition?: number;
-  createdAt: string;
-}
-
-interface Student {
-  id: string;
-  firstName: string;
-  lastName: string;
-  classId: string;
-}
+// Interfaces are now imported from lib files
 
 interface Class {
   id: string;
@@ -85,16 +53,19 @@ export default function GradesManagement() {
 
   useEffect(() => {
     document.title = "Gestion des Notes — École Manager";
-    const y = getActiveYearId();
-    const savedClasses = JSON.parse(localStorage.getItem("classes") || "[]");
-    const savedStudents = JSON.parse(localStorage.getItem("students") || "[]");
-    const savedClassSubjects = JSON.parse(localStorage.getItem(keyForYear("classSubjects", y)) || "[]");
-    const savedGrades = JSON.parse(localStorage.getItem(keyForYear("grades", y)) || "[]");
+    try {
+      const savedClasses = getClasses().map(c => ({ id: c.id, name: c.name }));
+      const savedStudents = getStudents();
+      const savedClassSubjects = getClassSubjects();
+      const savedGrades = getGrades();
 
-    setClasses(savedClasses);
-    setStudents(savedStudents);
-    setClassSubjects(savedClassSubjects);
-    setGrades(savedGrades);
+      setClasses(savedClasses);
+      setStudents(savedStudents);
+      setClassSubjects(savedClassSubjects);
+      setGrades(savedGrades);
+    } catch (error) {
+      console.error('Error loading grades data:', error);
+    }
   }, []);
 
   const getCurrentClassSubjects = () => {
@@ -121,7 +92,7 @@ export default function GradesManagement() {
 
     const updatedClassSubjects = [...classSubjects, newClassSubjects];
     setClassSubjects(updatedClassSubjects);
-    localStorage.setItem(keyForYear("classSubjects"), JSON.stringify(updatedClassSubjects));
+    saveClassSubjects(updatedClassSubjects);
     setMessage("Configuration créée avec succès!");
     setTimeout(() => setMessage(""), 3000);
   };
@@ -139,7 +110,7 @@ export default function GradesManagement() {
     const updatedClassSubjects = classSubjects.map((cs) => (cs.id === currentConfig.id ? updatedConfig : cs));
 
     setClassSubjects(updatedClassSubjects);
-    localStorage.setItem(keyForYear("classSubjects"), JSON.stringify(updatedClassSubjects));
+    saveClassSubjects(updatedClassSubjects);
     setShowSubjectForm(false);
     setMessage("Matière ajoutée avec succès!");
     setTimeout(() => setMessage(""), 3000);
@@ -157,7 +128,7 @@ export default function GradesManagement() {
     const updatedClassSubjects = classSubjects.map((cs) => (cs.id === currentConfig.id ? updatedConfig : cs));
 
     setClassSubjects(updatedClassSubjects);
-    localStorage.setItem(keyForYear("classSubjects"), JSON.stringify(updatedClassSubjects));
+    saveClassSubjects(updatedClassSubjects);
     setEditingSubject(null);
     setMessage("Matière modifiée avec succès!");
     setTimeout(() => setMessage(""), 3000);
@@ -177,7 +148,7 @@ export default function GradesManagement() {
     const updatedClassSubjects = classSubjects.map((cs) => (cs.id === currentConfig.id ? updatedConfig : cs));
 
     setClassSubjects(updatedClassSubjects);
-    localStorage.setItem(keyForYear("classSubjects"), JSON.stringify(updatedClassSubjects));
+    saveClassSubjects(updatedClassSubjects);
     setMessage("Matière supprimée avec succès!");
     setTimeout(() => setMessage(""), 3000);
   };
@@ -196,7 +167,7 @@ export default function GradesManagement() {
       const updatedGrade = { ...existingGrade, [gradeType]: value } as Grade;
       const updatedGrades = grades.map((g) => (g.id === existingGrade.id ? updatedGrade : g));
       setGrades(updatedGrades);
-      localStorage.setItem(keyForYear("grades"), JSON.stringify(updatedGrades));
+      saveGrades(updatedGrades);
     } else {
       const newGrade: Grade = {
         id: Date.now().toString(),
@@ -210,7 +181,7 @@ export default function GradesManagement() {
 
       const updatedGrades = [...grades, newGrade];
       setGrades(updatedGrades);
-      localStorage.setItem(keyForYear("grades"), JSON.stringify(updatedGrades));
+      saveGrades(updatedGrades);
     }
   };
 

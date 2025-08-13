@@ -21,16 +21,9 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { getEnrollments } from "@/lib/students";
 import { getActiveYearId } from "@/lib/years";
+import { getClasses, addClass, updateClass, deleteClass, ClassItem } from "@/lib/classes";
 
-interface ClassItem {
-  id: string;
-  name: string;
-  description?: string;
-  capacity: number;
-  createdAt: string;
-}
-
-const STORAGE_KEY = "classes";
+// ClassItem is now imported from @/lib/classes
 
 export default function ClassManagement() {
   // SEO basics
@@ -67,42 +60,53 @@ export default function ClassManagement() {
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      const saved = getClasses();
       setClasses(saved);
     } catch {
       setClasses([]);
     }
   }, []);
 
-  const saveToStorage = (list: ClassItem[]) => {
-    setClasses(list);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  const refreshClasses = () => {
+    try {
+      const saved = getClasses();
+      setClasses(saved);
+    } catch {
+      setClasses([]);
+    }
   };
 
   const handleCreate = (data: Omit<ClassItem, "id" | "createdAt">) => {
-    const item: ClassItem = {
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      ...data,
-    };
-    const updated = [...classes, item];
-    saveToStorage(updated);
-    setCreateOpen(false);
-    toast({ title: "Classe créée", description: `${item.name} a été ajoutée.` });
+    try {
+      const item = addClass(data);
+      refreshClasses();
+      setCreateOpen(false);
+      toast({ title: "Classe créée", description: `${item.name} a été ajoutée.` });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de créer la classe.", variant: "destructive" });
+    }
   };
 
   const handleUpdate = (data: ClassItem) => {
-    const updated = classes.map((c) => (c.id === data.id ? data : c));
-    saveToStorage(updated);
-    setEditing(null);
-    toast({ title: "Classe modifiée", description: `${data.name} mise à jour.` });
+    try {
+      updateClass(data);
+      refreshClasses();
+      setEditing(null);
+      toast({ title: "Classe modifiée", description: `${data.name} mise à jour.` });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de modifier la classe.", variant: "destructive" });
+    }
   };
 
   const handleDelete = (id: string) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer cette classe ?")) return;
-    const updated = classes.filter((c) => c.id !== id);
-    saveToStorage(updated);
-    toast({ title: "Classe supprimée" });
+    try {
+      deleteClass(id);
+      refreshClasses();
+      toast({ title: "Classe supprimée" });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de supprimer la classe.", variant: "destructive" });
+    }
   };
 
   const getStudentCount = (classId: string) => {

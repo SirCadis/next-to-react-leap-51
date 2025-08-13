@@ -1,25 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Clock } from "lucide-react";
-
-interface ScheduleBlock {
-  id: string;
-  day: string;
-  startTime: string;
-  endTime: string;
-  subject: string;
-  teacherId: string;
-  classId: string;
-  color: string;
-  createdAt: string;
-}
-
-interface Teacher {
-  id: string;
-  firstName: string;
-  lastName: string;
-  subject: string;
-}
+import { getSchedules, addSchedule, updateSchedule, deleteSchedule, ScheduleBlock } from "@/lib/schedules";
+import { getClasses, ClassItem } from "@/lib/classes";
+import { getTeachers, Teacher } from "@/lib/teachers";
 
 interface Class {
   id: string;
@@ -40,13 +24,17 @@ export default function ScheduleManagement() {
 
   useEffect(() => {
     document.title = "Gestion des Emplois du Temps — École Manager";
-    const savedSchedules = JSON.parse(localStorage.getItem("schedules") || "[]");
-    const savedTeachers = JSON.parse(localStorage.getItem("teachers") || "[]");
-    const savedClasses = JSON.parse(localStorage.getItem("classes") || "[]");
+    try {
+      const savedSchedules = getSchedules();
+      const savedTeachers = getTeachers();
+      const savedClasses = getClasses();
 
-    setScheduleBlocks(savedSchedules);
-    setTeachers(savedTeachers);
-    setClasses(savedClasses);
+      setScheduleBlocks(savedSchedules);
+      setTeachers(savedTeachers);
+      setClasses(savedClasses.map(c => ({ id: c.id, name: c.name })));
+    } catch (error) {
+      console.error('Error loading schedule data:', error);
+    }
   }, []);
 
   const timeSlots = useMemo(() => {
@@ -140,6 +128,15 @@ export default function ScheduleManagement() {
     );
   };
 
+  const refreshSchedules = () => {
+    try {
+      const savedSchedules = getSchedules();
+      setScheduleBlocks(savedSchedules);
+    } catch (error) {
+      console.error('Error refreshing schedules:', error);
+    }
+  };
+
   const handleCreateBlock = (blockData: Omit<ScheduleBlock, "id" | "createdAt">) => {
     const conflicts = getConflicts(blockData.day, blockData.startTime, blockData.endTime, blockData.teacherId, blockData.classId);
     const teacherConflict = conflicts.find((c) => c.teacherId === blockData.teacherId);
@@ -156,13 +153,16 @@ export default function ScheduleManagement() {
       return;
     }
 
-    const newBlock: ScheduleBlock = { id: Date.now().toString(), ...blockData, createdAt: new Date().toISOString() };
-    const updatedSchedules = [...scheduleBlocks, newBlock];
-    setScheduleBlocks(updatedSchedules);
-    localStorage.setItem("schedules", JSON.stringify(updatedSchedules));
-    setShowCreateForm(false);
-    setMessage("Cours ajouté avec succès!");
-    setTimeout(() => setMessage(""), 3000);
+    try {
+      addSchedule(blockData);
+      refreshSchedules();
+      setShowCreateForm(false);
+      setMessage("Cours ajouté avec succès!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (error) {
+      setMessage("Erreur lors de l'ajout du cours");
+      setTimeout(() => setMessage(""), 5000);
+    }
   };
 
   const handleEditBlock = (updatedBlock: ScheduleBlock) => {
@@ -188,21 +188,29 @@ export default function ScheduleManagement() {
       return;
     }
 
-    const updatedSchedules = scheduleBlocks.map((block) => (block.id === updatedBlock.id ? updatedBlock : block));
-    setScheduleBlocks(updatedSchedules);
-    localStorage.setItem("schedules", JSON.stringify(updatedSchedules));
-    setEditingBlock(null);
-    setMessage("Cours modifié avec succès!");
-    setTimeout(() => setMessage(""), 3000);
+    try {
+      updateSchedule(updatedBlock);
+      refreshSchedules();
+      setEditingBlock(null);
+      setMessage("Cours modifié avec succès!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (error) {
+      setMessage("Erreur lors de la modification du cours");
+      setTimeout(() => setMessage(""), 5000);
+    }
   };
 
   const handleDeleteBlock = (blockId: string) => {
     if (confirm("Êtes-vous sûr de vouloir supprimer ce cours?")) {
-      const updatedSchedules = scheduleBlocks.filter((block) => block.id !== blockId);
-      setScheduleBlocks(updatedSchedules);
-      localStorage.setItem("schedules", JSON.stringify(updatedSchedules));
-      setMessage("Cours supprimé avec succès!");
-      setTimeout(() => setMessage(""), 3000);
+      try {
+        deleteSchedule(blockId);
+        refreshSchedules();
+        setMessage("Cours supprimé avec succès!");
+        setTimeout(() => setMessage(""), 3000);
+      } catch (error) {
+        setMessage("Erreur lors de la suppression du cours");
+        setTimeout(() => setMessage(""), 5000);
+      }
     }
   };
 

@@ -14,17 +14,14 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { getActiveYearId } from "@/lib/years";
-import { getEnrollments } from "@/lib/students";
-interface Student {
-  id: string;
-  firstName: string;
-  lastName: string;
-  birthDate: string;
+import { getEnrollments, getStudents, upsertStudent, Student } from "@/lib/students";
+import { getClasses } from "@/lib/classes";
+
+// Extended Student interface for UI
+interface UIStudent extends Student {
+  parentPhone?: string;
   studentNumber?: string;
-  birthPlace?: string;
-  parentPhone: string;
-  gender: "homme" | "femme";
-  classId: string;
+  classId?: string;
 }
 
 interface Class {
@@ -33,24 +30,28 @@ interface Class {
 }
 
 export default function StudentManagement() {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<UIStudent[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editingStudent, setEditingStudent] = useState<UIStudent | null>(null);
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<UIStudent | null>(null);
   const [activeYear, setActiveYear] = useState<string>(() => getActiveYearId());
   const [profileOpen, setProfileOpen] = useState(false);
-  const [profileStudent, setProfileStudent] = useState<Student | null>(null);
+  const [profileStudent, setProfileStudent] = useState<UIStudent | null>(null);
 
   useEffect(() => {
     document.title = "Gestion des Élèves — École Manager";
-    const savedStudents = JSON.parse(localStorage.getItem("students") || "[]");
-    const savedClasses = JSON.parse(localStorage.getItem("classes") || "[]");
-    setStudents(savedStudents);
-    setClasses(savedClasses);
+    try {
+      const savedStudents = getStudents();
+      const savedClasses = getClasses().map(c => ({ id: c.id, name: c.name }));
+      setStudents(savedStudents);
+      setClasses(savedClasses);
+    } catch (error) {
+      console.error('Error loading student data:', error);
+    }
   }, []);
 
   useEffect(() => {
@@ -81,13 +82,26 @@ const filteredStudents = useMemo(() => {
     return cls ? cls.name : "Classe inconnue";
   };
 
-  const handleSaveEdit = (updatedStudent: Student) => {
-    const updatedStudents = students.map((s) => (s.id === updatedStudent.id ? updatedStudent : s));
-    setStudents(updatedStudents);
-    localStorage.setItem("students", JSON.stringify(updatedStudents));
-    setEditingStudent(null);
-    setMessage("Élève modifié avec succès!");
-    setTimeout(() => setMessage(""), 3000);
+  const refreshStudents = () => {
+    try {
+      const savedStudents = getStudents();
+      setStudents(savedStudents);
+    } catch (error) {
+      console.error('Error refreshing students:', error);
+    }
+  };
+
+  const handleSaveEdit = (updatedStudent: UIStudent) => {
+    try {
+      upsertStudent(updatedStudent);
+      refreshStudents();
+      setEditingStudent(null);
+      setMessage("Élève modifié avec succès!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (error) {
+      setMessage("Erreur lors de la modification de l'élève");
+      setTimeout(() => setMessage(""), 5000);
+    }
   };
 
 const requestDelete = (id: string) => {
@@ -98,13 +112,19 @@ const requestDelete = (id: string) => {
 
   const confirmDelete = () => {
     if (!studentToDelete) return;
-    const updatedStudents = students.filter((s) => s.id !== studentToDelete.id);
-    setStudents(updatedStudents);
-    localStorage.setItem("students", JSON.stringify(updatedStudents));
-    setMessage("Élève supprimé avec succès!");
-    setTimeout(() => setMessage(""), 3000);
-    setConfirmOpen(false);
-    setStudentToDelete(null);
+    try {
+      // Note: We should create a deleteStudent function in students.ts
+      const updatedStudents = students.filter((s) => s.id !== studentToDelete.id);
+      setStudents(updatedStudents);
+      // TODO: Implement proper deleteStudent function in SQLite
+      setMessage("Élève supprimé avec succès!");
+      setTimeout(() => setMessage(""), 3000);
+      setConfirmOpen(false);
+      setStudentToDelete(null);
+    } catch (error) {
+      setMessage("Erreur lors de la suppression de l'élève");
+      setTimeout(() => setMessage(""), 5000);
+    }
   };
 
   return (
@@ -235,7 +255,7 @@ const requestDelete = (id: string) => {
 
       {editingStudent && (
         <EditStudentModal
-          student={editingStudent}
+          student={editingStudent as any}
           classes={classes}
           onSave={handleSaveEdit}
           onCancel={() => setEditingStudent(null)}

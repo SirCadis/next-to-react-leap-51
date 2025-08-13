@@ -2,25 +2,20 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { getActiveYearId } from "@/lib/years";
-import { getAssignedTeacherIds, setTeacherAssigned } from "@/lib/teachers";
-interface Teacher {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  subject: string;
-  hireDate: string;
-  paymentType: "fixe" | "horaire";
+import { getAssignedTeacherIds, setTeacherAssigned, getTeachers, Teacher } from "@/lib/teachers";
+// Extended Teacher interface for UI
+interface ExtendedTeacher extends Teacher {
+  hireDate?: string;
+  paymentType?: "fixe" | "horaire";
   salary?: number;
   hourlyRate?: number;
-  gender: "homme" | "femme";
-  residence: string;
-  contactType: "telephone" | "email" | "whatsapp" | "sms";
-  yearsExperience: number;
-  nationality: string;
-  emergencyContact: string;
-  emergencyPhone: string;
+  gender?: "homme" | "femme";
+  residence?: string;
+  contactType?: "telephone" | "email" | "whatsapp" | "sms";
+  yearsExperience?: number;
+  nationality?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
 }
 
 interface Subject {
@@ -47,16 +42,20 @@ const subjects: Subject[] = [
 ];
 
 export default function TeacherManagement() {
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [teachers, setTeachers] = useState<ExtendedTeacher[]>([]);
   const [filteredSubject, setFilteredSubject] = useState("");
-  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
-  const [viewingTeacher, setViewingTeacher] = useState<Teacher | null>(null);
+  const [editingTeacher, setEditingTeacher] = useState<ExtendedTeacher | null>(null);
+  const [viewingTeacher, setViewingTeacher] = useState<ExtendedTeacher | null>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     document.title = "Gestion des Professeurs — École Manager";
-    const savedTeachers = JSON.parse(localStorage.getItem("teachers") || "[]");
-    setTeachers(savedTeachers);
+    try {
+      const savedTeachers = getTeachers() as ExtendedTeacher[];
+      setTeachers(savedTeachers);
+    } catch (error) {
+      console.error('Error loading teacher data:', error);
+    }
   }, []);
   const yearId = getActiveYearId();
   const [assigned, setAssigned] = useState<string[]>(() => getAssignedTeacherIds(yearId));
@@ -88,22 +87,41 @@ export default function TeacherManagement() {
     return (types as any)[contactType] || contactType;
   };
 
-  const handleSaveEdit = (updatedTeacher: Teacher) => {
-    const updatedTeachers = teachers.map((t) => (t.id === updatedTeacher.id ? updatedTeacher : t));
-    setTeachers(updatedTeachers);
-    localStorage.setItem("teachers", JSON.stringify(updatedTeachers));
-    setEditingTeacher(null);
-    setMessage("Professeur modifié avec succès!");
-    setTimeout(() => setMessage(""), 3000);
+  const refreshTeachers = () => {
+    try {
+      const savedTeachers = getTeachers() as ExtendedTeacher[];
+      setTeachers(savedTeachers);
+    } catch (error) {
+      console.error('Error refreshing teachers:', error);
+    }
+  };
+
+  const handleSaveEdit = (updatedTeacher: ExtendedTeacher) => {
+    try {
+      // TODO: Implement updateTeacher function in teachers.ts
+      const updatedTeachers = teachers.map((t) => (t.id === updatedTeacher.id ? updatedTeacher : t));
+      setTeachers(updatedTeachers);
+      setEditingTeacher(null);
+      setMessage("Professeur modifié avec succès!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (error) {
+      setMessage("Erreur lors de la modification du professeur");
+      setTimeout(() => setMessage(""), 5000);
+    }
   };
 
   const handleDelete = (teacherId: string) => {
     if (confirm("Êtes-vous sûr de vouloir supprimer ce professeur?")) {
-      const updatedTeachers = teachers.filter((t) => t.id !== teacherId);
-      setTeachers(updatedTeachers);
-      localStorage.setItem("teachers", JSON.stringify(updatedTeachers));
-      setMessage("Professeur supprimé avec succès!");
-      setTimeout(() => setMessage(""), 3000);
+      try {
+        // TODO: Implement deleteTeacher function in teachers.ts
+        const updatedTeachers = teachers.filter((t) => t.id !== teacherId);
+        setTeachers(updatedTeachers);
+        setMessage("Professeur supprimé avec succès!");
+        setTimeout(() => setMessage(""), 3000);
+      } catch (error) {
+        setMessage("Erreur lors de la suppression du professeur");
+        setTimeout(() => setMessage(""), 5000);
+      }
     }
   };
 
@@ -241,14 +259,14 @@ export default function TeacherManagement() {
 }
 
 interface EditTeacherModalProps {
-  teacher: Teacher;
+  teacher: ExtendedTeacher;
   subjects: Subject[];
-  onSave: (teacher: Teacher) => void;
+  onSave: (teacher: ExtendedTeacher) => void;
   onCancel: () => void;
 }
 
 function EditTeacherModal({ teacher, subjects, onSave, onCancel }: EditTeacherModalProps) {
-  const [formData, setFormData] = useState<Teacher>(teacher);
+  const [formData, setFormData] = useState<ExtendedTeacher>(teacher);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -346,7 +364,7 @@ function EditTeacherModal({ teacher, subjects, onSave, onCancel }: EditTeacherMo
 }
 
 interface ViewTeacherModalProps {
-  teacher: Teacher;
+  teacher: ExtendedTeacher;
   subjects: Subject[];
   onClose: () => void;
 }

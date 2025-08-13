@@ -3,6 +3,7 @@ import { Users, GraduationCap, User } from "lucide-react";
 import { getActiveYearId } from "@/lib/years";
 import { getEnrollments } from "@/lib/students";
 import { getAssignedTeacherIds } from "@/lib/teachers";
+import { getClasses } from "@/lib/classes";
 
 interface Stats {
   students: number;
@@ -18,7 +19,7 @@ export default function Dashboard() {
 
     const yearId = getActiveYearId();
     const enrollments = getEnrollments(yearId);
-    const classes = JSON.parse(localStorage.getItem("classes") || "[]");
+    const classes = getClasses();
     const teachersAssigned = getAssignedTeacherIds(yearId);
 
     setStats({ students: enrollments.length, classes: classes.length, teachers: teachersAssigned.length });
