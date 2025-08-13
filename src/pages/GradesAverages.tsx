@@ -3,8 +3,10 @@ import { useLocation, Link } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getActiveYearId, keyForYear } from "@/lib/years";
-import { getEnrollments } from "@/lib/students";
+import { getActiveYearId } from "@/lib/years";
+import { getEnrollments, getStudents } from "@/lib/students";
+import { getClasses } from "@/lib/classes";
+import { getClassSubjects, getGrades } from "@/lib/grades";
 
 interface Subject {
   id: string;
@@ -39,7 +41,7 @@ interface Student {
   id: string;
   firstName: string;
   lastName: string;
-  classId: string;
+  classId?: string;
 }
 
 interface ClassItem {
@@ -63,7 +65,7 @@ export default function GradesAverages() {
 
   const classes: ClassItem[] = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem("classes") || "[]");
+      return getClasses().map(c => ({ id: c.id, name: c.name }));
     } catch {
       return [];
     }
@@ -71,7 +73,7 @@ export default function GradesAverages() {
 
   const students: Student[] = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem("students") || "[]");
+      return getStudents();
     } catch {
       return [];
     }
@@ -79,8 +81,7 @@ export default function GradesAverages() {
 
   const classSubjects: ClassSubjects[] = useMemo(() => {
     try {
-      const y = getActiveYearId();
-      return JSON.parse(localStorage.getItem(keyForYear("classSubjects", y)) || "[]");
+      return getClassSubjects();
     } catch {
       return [];
     }
@@ -88,8 +89,7 @@ export default function GradesAverages() {
 
   const grades: Grade[] = useMemo(() => {
     try {
-      const y = getActiveYearId();
-      return JSON.parse(localStorage.getItem(keyForYear("grades", y)) || "[]");
+      return getGrades();
     } catch {
       return [];
     }

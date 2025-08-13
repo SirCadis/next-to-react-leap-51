@@ -94,3 +94,21 @@ export function getStudentHistory(studentId: string): Enrollment[] {
   const stmt = db.prepare('SELECT * FROM enrollments WHERE student_id = ? ORDER BY year_id');
   return stmt.all(studentId) as Enrollment[];
 }
+
+export function deleteStudent(studentId: string) {
+  const deleteStudentStmt = db.prepare('DELETE FROM students WHERE id = ?');
+  const deleteEnrollmentsStmt = db.prepare('DELETE FROM enrollments WHERE student_id = ?');
+  const deleteActivationsStmt = db.prepare('DELETE FROM student_fee_activations WHERE student_id = ?');
+  const deleteServiceActivationsStmt = db.prepare('DELETE FROM student_service_activations WHERE student_id = ?');
+  const deletePaymentsStmt = db.prepare('DELETE FROM payments WHERE student_id = ?');
+  
+  const transaction = db.transaction(() => {
+    deleteActivationsStmt.run(studentId);
+    deleteServiceActivationsStmt.run(studentId);
+    deletePaymentsStmt.run(studentId);
+    deleteEnrollmentsStmt.run(studentId);
+    deleteStudentStmt.run(studentId);
+  });
+  
+  transaction();
+}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { getActiveYearId } from "@/lib/years";
-import { getAssignedTeacherIds, setTeacherAssigned, getTeachers, Teacher } from "@/lib/teachers";
+import { getAssignedTeacherIds, setTeacherAssigned, getTeachers, updateTeacher, deleteTeacher, Teacher } from "@/lib/teachers";
 // Extended Teacher interface for UI
 interface ExtendedTeacher extends Teacher {
   hireDate?: string;
@@ -98,9 +98,8 @@ export default function TeacherManagement() {
 
   const handleSaveEdit = (updatedTeacher: ExtendedTeacher) => {
     try {
-      // TODO: Implement updateTeacher function in teachers.ts
-      const updatedTeachers = teachers.map((t) => (t.id === updatedTeacher.id ? updatedTeacher : t));
-      setTeachers(updatedTeachers);
+      updateTeacher(updatedTeacher);
+      refreshTeachers();
       setEditingTeacher(null);
       setMessage("Professeur modifié avec succès!");
       setTimeout(() => setMessage(""), 3000);
@@ -113,9 +112,8 @@ export default function TeacherManagement() {
   const handleDelete = (teacherId: string) => {
     if (confirm("Êtes-vous sûr de vouloir supprimer ce professeur?")) {
       try {
-        // TODO: Implement deleteTeacher function in teachers.ts
-        const updatedTeachers = teachers.filter((t) => t.id !== teacherId);
-        setTeachers(updatedTeachers);
+        deleteTeacher(teacherId);
+        refreshTeachers();
         setMessage("Professeur supprimé avec succès!");
         setTimeout(() => setMessage(""), 3000);
       } catch (error) {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { addTeacher, getTeachers } from "@/lib/teachers";
 
 interface Teacher {
   id: string;
@@ -69,12 +70,16 @@ export default function TeacherRegistration() {
 
   useEffect(() => {
     document.title = "Inscription Professeurs — École Manager";
-    const savedTeachers = JSON.parse(localStorage.getItem("teachers") || "[]");
-    const numericIds = Array.isArray(savedTeachers)
-      ? savedTeachers.map((t: any) => (typeof t?.id === "string" && /^\d+$/.test(t.id) ? parseInt(t.id, 10) : -1))
-      : [];
-    const maxId = numericIds.length ? Math.max(...numericIds) : -1;
-    setNextId((isFinite(maxId) ? maxId : -1) + 1);
+    try {
+      const savedTeachers = getTeachers();
+      const numericIds = Array.isArray(savedTeachers)
+        ? savedTeachers.map((t: any) => (typeof t?.id === "string" && /^\d+$/.test(t.id) ? parseInt(t.id, 10) : -1))
+        : [];
+      const maxId = numericIds.length ? Math.max(...numericIds) : -1;
+      setNextId((isFinite(maxId) ? maxId : -1) + 1);
+    } catch (error) {
+      console.error('Error loading teacher registration data:', error);
+    }
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -101,13 +106,15 @@ export default function TeacherRegistration() {
       ...formData,
     };
 
-    const existingTeachers = JSON.parse(localStorage.getItem("teachers") || "[]");
-    const updatedTeachers = [...existingTeachers, newTeacher];
-    localStorage.setItem("teachers", JSON.stringify(updatedTeachers));
-    setNextId((prev) => prev + 1);
+    try {
+      addTeacher(newTeacher);
+      setNextId((prev) => prev + 1);
+      setMessage("Professeur inscrit avec succès!");
+    } catch (error) {
+      setMessage("Erreur lors de l'inscription du professeur");
+      return;
+    }
 
-
-    setMessage("Professeur inscrit avec succès!");
     setFormData({
       firstName: "",
       lastName: "",

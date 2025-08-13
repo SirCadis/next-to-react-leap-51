@@ -59,3 +59,39 @@ export function setTeacherAssigned(teacherId: string, assigned: boolean, yearId:
   }
   return assigned;
 }
+
+export function addTeacher(teacher: Omit<Teacher, 'id'>) {
+  const newTeacher: Teacher = {
+    id: Date.now().toString(),
+    ...teacher
+  };
+  
+  const stmt = db.prepare(`
+    INSERT INTO teachers (id, firstName, lastName, email, phone, subject)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(newTeacher.id, newTeacher.firstName, newTeacher.lastName, newTeacher.email, newTeacher.phone, newTeacher.subject);
+  
+  return newTeacher;
+}
+
+export function updateTeacher(teacher: Teacher) {
+  const stmt = db.prepare(`
+    UPDATE teachers SET 
+      firstName = ?, lastName = ?, email = ?, phone = ?, subject = ?
+    WHERE id = ?
+  `);
+  stmt.run(teacher.firstName, teacher.lastName, teacher.email, teacher.phone, teacher.subject, teacher.id);
+}
+
+export function deleteTeacher(teacherId: string) {
+  const deleteTeacherStmt = db.prepare('DELETE FROM teachers WHERE id = ?');
+  const deleteAssignmentsStmt = db.prepare('DELETE FROM teacher_assignments WHERE teacher_id = ?');
+  
+  const transaction = db.transaction(() => {
+    deleteAssignmentsStmt.run(teacherId);
+    deleteTeacherStmt.run(teacherId);
+  });
+  
+  transaction();
+}

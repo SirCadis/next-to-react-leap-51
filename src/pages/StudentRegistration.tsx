@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { upsertStudent, enrollStudent } from "@/lib/students";
+import { upsertStudent, enrollStudent, getStudents } from "@/lib/students";
+import { getClasses } from "@/lib/classes";
 
 interface Student {
   id: string;
@@ -36,14 +37,18 @@ export default function StudentRegistration() {
 
   useEffect(() => {
     document.title = "Inscription Élève — École Manager";
-    const savedClasses = JSON.parse(localStorage.getItem("classes") || "[]");
-    setClasses(savedClasses);
-    const savedStudents = JSON.parse(localStorage.getItem("students") || "[]");
-    const numericIds = Array.isArray(savedStudents)
-      ? savedStudents.map((s: any) => (typeof s?.id === "string" && /^\d+$/.test(s.id) ? parseInt(s.id, 10) : -1))
-      : [];
-    const maxId = numericIds.length ? Math.max(...numericIds) : -1;
-    setNextId((isFinite(maxId) ? maxId : -1) + 1);
+    try {
+      const savedClasses = getClasses().map(c => ({ id: c.id, name: c.name }));
+      setClasses(savedClasses);
+      const savedStudents = getStudents();
+      const numericIds = Array.isArray(savedStudents)
+        ? savedStudents.map((s: any) => (typeof s?.id === "string" && /^\d+$/.test(s.id) ? parseInt(s.id, 10) : -1))
+        : [];
+      const maxId = numericIds.length ? Math.max(...numericIds) : -1;
+      setNextId((isFinite(maxId) ? maxId : -1) + 1);
+    } catch (error) {
+      console.error('Error loading registration data:', error);
+    }
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {

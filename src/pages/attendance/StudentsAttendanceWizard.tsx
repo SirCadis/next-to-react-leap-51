@@ -23,14 +23,23 @@ export default function StudentsAttendanceWizard() {
 
   // Load storage
   useEffect(() => {
-    const savedClasses = JSON.parse(localStorage.getItem("classes") || "[]");
-    const savedStudents = JSON.parse(localStorage.getItem("students") || "[]");
-    const savedTeachers = JSON.parse(localStorage.getItem("teachers") || "[]");
-    const savedSchedules = JSON.parse(localStorage.getItem("schedules") || "[]");
-    setClasses(savedClasses);
-    setStudents(savedStudents);
-    setTeachers(savedTeachers);
-    setSchedules(savedSchedules);
+    try {
+      const { getClasses } = require("@/lib/classes");
+      const { getStudents } = require("@/lib/students");
+      const { getTeachers } = require("@/lib/teachers");
+      const { getSchedules } = require("@/lib/schedules");
+
+      const savedClasses = getClasses().map((c: any) => ({ id: c.id, name: c.name }));
+      const savedStudents = getStudents();
+      const savedTeachers = getTeachers();
+      const savedSchedules = getSchedules();
+      setClasses(savedClasses);
+      setStudents(savedStudents);
+      setTeachers(savedTeachers);
+      setSchedules(savedSchedules);
+    } catch (error) {
+      console.error('Error loading wizard data:', error);
+    }
   }, []);
 
   // Params
@@ -99,12 +108,17 @@ export default function StudentsAttendanceWizard() {
         comment: entries[s.id]?.comment || "",
       })),
       createdAt: new Date().toISOString(),
-    };
-    const saved: AttendanceRecord[] = JSON.parse(localStorage.getItem("attendanceRecords") || "[]");
-    const idx = saved.findIndex((r) => r.id === payload.id);
-    if (idx >= 0) saved[idx] = payload; else saved.push(payload);
-    localStorage.setItem("attendanceRecords", JSON.stringify(saved));
-    toast({ title: "Présences enregistrées", description: "Les données ont été sauvegardées." });
+    } as any;
+    try {
+      const { getAttendanceRecords, saveAttendanceRecords } = require("@/lib/attendance");
+      const saved = getAttendanceRecords();
+      const idx = saved.findIndex((r: any) => r.id === payload.id);
+      const updatedRecords = idx >= 0 ? saved.map((r: any, i: number) => i === idx ? payload : r) : [...saved, payload];
+      saveAttendanceRecords(updatedRecords);
+      toast({ title: "Présences enregistrées", description: "Les données ont été sauvegardées." });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de sauvegarder.", variant: "destructive" });
+    }
   };
 
   const canonical = typeof window !== "undefined" ? window.location.href : undefined;

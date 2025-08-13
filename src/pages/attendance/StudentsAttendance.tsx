@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import StudentsAttendanceToolbar from "./components/StudentsAttendanceToolbar";
 import StudentsAttendanceSummary from "./components/StudentsAttendanceSummary";
 import StudentsAttendanceTable, { EntryValue } from "./components/StudentsAttendanceTable";
+import { getAttendanceRecords, saveAttendanceRecords } from "@/lib/attendance";
 import type { AttendanceStatus, Student, Class, Teacher, ScheduleBlock, AttendanceRecord, AttendanceEntry } from "./types";
 
 export default function StudentsAttendance() {
@@ -24,15 +25,24 @@ export default function StudentsAttendance() {
   const [locked, setLocked] = useState(false);
 
   useEffect(() => {
-    const savedClasses = JSON.parse(localStorage.getItem("classes") || "[]");
-    const savedStudents = JSON.parse(localStorage.getItem("students") || "[]");
-    const savedTeachers = JSON.parse(localStorage.getItem("teachers") || "[]");
-    const savedSchedules = JSON.parse(localStorage.getItem("schedules") || "[]");
+    try {
+      const { getClasses } = require("@/lib/classes");
+      const { getStudents } = require("@/lib/students");
+      const { getTeachers } = require("@/lib/teachers");
+      const { getSchedules } = require("@/lib/schedules");
 
-    setClasses(savedClasses);
-    setStudents(savedStudents);
-    setTeachers(savedTeachers);
-    setSchedules(savedSchedules);
+      const savedClasses = getClasses().map((c: any) => ({ id: c.id, name: c.name }));
+      const savedStudents = getStudents();
+      const savedTeachers = getTeachers();
+      const savedSchedules = getSchedules();
+
+      setClasses(savedClasses);
+      setStudents(savedStudents);
+      setTeachers(savedTeachers);
+      setSchedules(savedSchedules);
+    } catch (error) {
+      console.error('Error loading attendance data:', error);
+    }
   }, []);
 
   const dayName = useMemo(() => {
@@ -60,18 +70,22 @@ export default function StudentsAttendance() {
   // Charger si un enregistrement existe
   useEffect(() => {
     if (!selectedClassId || !selectedBlockId || !date) return;
-    const saved: AttendanceRecord[] = JSON.parse(localStorage.getItem("attendanceRecords") || "[]");
-    const rec = saved.find((r) => r.classId === selectedClassId && r.scheduleBlockId === selectedBlockId && r.date === date);
-    if (rec) {
-      const map: Record<string, EntryValue> = {};
-      rec.entries.forEach((e) => {
-        map[e.studentId] = { status: e.status, comment: e.comment || "" };
-      });
-      setEntries(map);
-      setLocked(!!rec.locked);
-    } else {
-      setEntries({});
-      setLocked(false);
+    try {
+      const saved = getAttendanceRecords();
+      const rec = saved.find((r: any) => r.classId === selectedClassId && r.scheduleBlockId === selectedBlockId && r.date === date);
+      if (rec) {
+        const map: Record<string, EntryValue> = {};
+        rec.entries.forEach((e: any) => {
+          map[e.studentId] = { status: e.status, comment: e.comment || "" };
+        });
+        setEntries(map);
+        setLocked(!!(rec as any).locked);
+      } else {
+        setEntries({});
+        setLocked(false);
+      }
+    } catch (error) {
+      console.error('Error loading attendance records:', error);
     }
   }, [selectedClassId, selectedBlockId, date]);
 
@@ -124,23 +138,33 @@ export default function StudentsAttendance() {
       })),
       createdAt: new Date().toISOString(),
       locked,
-    };
-    const saved: AttendanceRecord[] = JSON.parse(localStorage.getItem("attendanceRecords") || "[]");
-    const idx = saved.findIndex((r) => r.id === payload.id);
-    if (idx >= 0) saved[idx] = payload; else saved.push(payload);
-    localStorage.setItem("attendanceRecords", JSON.stringify(saved));
-    toast({ title: "Présences enregistrées", description: "Les données ont été sauvegardées." });
+    } as any;
+    try {
+      const saved = getAttendanceRecords();
+      const idx = saved.findIndex((r: any) => r.id === payload.id);
+      const updatedRecords = idx >= 0 ? saved.map((r: any, i: number) => i === idx ? payload : r) : [...saved, payload];
+      saveAttendanceRecords(updatedRecords);
+      toast({ title: "Présences enregistrées", description: "Les données ont été sauvegardées." });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de sauvegarder les présences.", variant: "destructive" });
+    }
   };
 
   const toggleLock = () => {
     setLocked((v) => !v);
     if (selectedClassId && selectedBlockId) {
-      const saved: AttendanceRecord[] = JSON.parse(localStorage.getItem("attendanceRecords") || "[]");
-      const id = `${selectedClassId}-${selectedBlockId}-${date}`;
-      const idx = saved.findIndex((r) => r.id === id);
-      if (idx >= 0) {
-        saved[idx].locked = !locked;
-        localStorage.setItem("attendanceRecords", JSON.stringify(saved));
+      try {
+        const saved = getAttendanceRecords();
+        const id = `${selectedClassId}-${selectedBlockId}-${date}`;
+        const idx = saved.findIndex((r: any) => r.id === id);
+        if (idx >= 0) {
+          const updatedRecords = saved.map((r: any, i: number) => 
+            i === idx ? { ...r, locked: !locked } : r
+          );
+          saveAttendanceRecords(updatedRecords);
+        }
+      } catch (error) {
+        console.error('Error toggling lock:', error);
       }
     }
   };

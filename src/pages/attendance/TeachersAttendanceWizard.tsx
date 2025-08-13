@@ -23,12 +23,20 @@ export default function TeachersAttendanceWizard() {
   const [classes, setClasses] = useState<Class[]>([]);
 
   useEffect(() => {
-    const savedTeachers = JSON.parse(localStorage.getItem("teachers") || "[]");
-    const savedSchedules = JSON.parse(localStorage.getItem("schedules") || "[]");
-    const savedClasses = JSON.parse(localStorage.getItem("classes") || "[]");
-    setTeachers(savedTeachers);
-    setSchedules(savedSchedules);
-    setClasses(savedClasses);
+    try {
+      const { getTeachers } = require("@/lib/teachers");
+      const { getSchedules } = require("@/lib/schedules");
+      const { getClasses } = require("@/lib/classes");
+
+      const savedTeachers = getTeachers();
+      const savedSchedules = getSchedules();
+      const savedClasses = getClasses().map((c: any) => ({ id: c.id, name: c.name }));
+      setTeachers(savedTeachers);
+      setSchedules(savedSchedules);
+      setClasses(savedClasses);
+    } catch (error) {
+      console.error('Error loading teacher wizard data:', error);
+    }
   }, []);
 
   // Params

@@ -41,7 +41,8 @@ export default function StudentsTracking() {
 
   const eleves = useMemo<Eleve[]>(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("students") || "[]");
+      const { getStudents } = require("@/lib/students");
+      const saved = getStudents();
       const enrollments = getEnrollments(activeYear);
       const emap = new Map<string, string>(enrollments.map((e) => [String(e.studentId), String(e.classId)]));
       if (!Array.isArray(saved)) return [];

@@ -14,7 +14,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { getActiveYearId } from "@/lib/years";
-import { getEnrollments, getStudents, upsertStudent, Student } from "@/lib/students";
+import { getEnrollments, getStudents, upsertStudent, deleteStudent, Student } from "@/lib/students";
 import { getClasses } from "@/lib/classes";
 
 // Extended Student interface for UI
@@ -113,10 +113,8 @@ const requestDelete = (id: string) => {
   const confirmDelete = () => {
     if (!studentToDelete) return;
     try {
-      // Note: We should create a deleteStudent function in students.ts
-      const updatedStudents = students.filter((s) => s.id !== studentToDelete.id);
-      setStudents(updatedStudents);
-      // TODO: Implement proper deleteStudent function in SQLite
+      deleteStudent(studentToDelete.id);
+      refreshStudents();
       setMessage("Élève supprimé avec succès!");
       setTimeout(() => setMessage(""), 3000);
       setConfirmOpen(false);

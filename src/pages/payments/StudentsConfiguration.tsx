@@ -26,9 +26,10 @@ export default function StudentsConfiguration() {
   const [mensualiteStr, setMensualiteStr] = useState("");
 
   useEffect(() => {
-    // Charger les classes depuis le stockage existant
+    // Charger les classes depuis SQLite
     try {
-      const raw = JSON.parse(localStorage.getItem("classes") || "[]");
+      const { getClasses } = require("@/lib/classes");
+      const raw = getClasses();
       const mapped: ClassItem[] = Array.isArray(raw)
         ? raw.map((c: any) => ({ id: String(c.id), name: String(c.name || c.nom || "") })).filter((c) => c.id && c.name)
         : [];
@@ -37,7 +38,8 @@ export default function StudentsConfiguration() {
 
     // Charger la configuration des frais
     try {
-      const f = JSON.parse(localStorage.getItem(FEES_KEY) || "{}");
+      const { getFeesPerClass } = require("@/lib/paymentsLocal");
+      const f = getFeesPerClass();
       setFeesMap(f && typeof f === "object" ? f : {});
     } catch { setFeesMap({}); }
   }, []);
@@ -60,7 +62,12 @@ export default function StudentsConfiguration() {
     if (!currentClass) return;
     const next = { ...feesMap, [currentClass.id]: { inscription: ins, mensualite: men } } as Record<string, Fees>;
     setFeesMap(next);
-    localStorage.setItem(FEES_KEY, JSON.stringify(next));
+    try {
+      const { saveFeesPerClass } = require("@/lib/paymentsLocal");
+      saveFeesPerClass(next);
+    } catch (error) {
+      console.error('Error saving fees:', error);
+    }
     toast({ title: "Montants enregistrés", description: `${currentClass.name} — Inscription ${formatXOF(ins)}, Mensualité ${formatXOF(men)}` });
     setOpen(false);
   };

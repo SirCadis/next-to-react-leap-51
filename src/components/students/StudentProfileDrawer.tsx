@@ -48,13 +48,13 @@ export default function StudentProfileDrawer({ open, onOpenChange, student, clas
   const years = useMemo(() => listYears(), []);
 
   const classSubjects = useMemo<ClassSubjects[]>(() => {
-    try { return JSON.parse(localStorage.getItem("classSubjects") || "[]"); } catch { return []; }
+    try { return require("@/lib/grades").getClassSubjects(); } catch { return []; }
   }, []);
   const grades = useMemo<Grade[]>(() => {
-    try { return JSON.parse(localStorage.getItem("grades") || "[]"); } catch { return []; }
+    try { return require("@/lib/grades").getGrades(); } catch { return []; }
   }, []);
   const attendance = useMemo<AttendanceRecord[]>(() => {
-    try { return JSON.parse(localStorage.getItem("attendanceRecords") || "[]"); } catch { return []; }
+    try { return require("@/lib/attendance").getAttendanceRecords(); } catch { return []; }
   }, []);
 
   function computeYearAverages(yearId: string, classId: string) {
@@ -63,8 +63,11 @@ export default function StudentProfileDrawer({ open, onOpenChange, student, clas
 
     let cs: ClassSubjects[] = [];
     let gr: Grade[] = [];
-    try { cs = JSON.parse(localStorage.getItem(keyForYear("classSubjects", yearId)) || "[]"); } catch { cs = []; }
-    try { gr = JSON.parse(localStorage.getItem(keyForYear("grades", yearId)) || "[]"); } catch { gr = []; }
+    try { 
+      const { getClassSubjects, getGrades } = require("@/lib/grades");
+      cs = getClassSubjects(yearId);
+      gr = getGrades(yearId);
+    } catch { cs = []; gr = []; }
 
     semesters.forEach((sem) => {
       if (!student) { out[sem] = null; return; }
@@ -89,14 +92,15 @@ export default function StudentProfileDrawer({ open, onOpenChange, student, clas
 
   function computeYearPayments(yearId: string) {
     if (!student) return { total: 0, byType: {} as Record<PaymentType, number>, months: 0 };
-    const key = keyForYear("studentPayments", yearId);
     let list: StudentPayment[] = [];
-    try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch { list = []; }
-    const mine = list.filter((p) => p.studentId === student.id);
+    try { 
+      const { getStudentPayments } = require("@/lib/paymentsLocal");
+      list = getStudentPayments(yearId).filter((p: any) => p.studentId === student.id);
+    } catch { list = []; }
     const byType: Record<PaymentType, number> = { inscription: 0, mensualite: 0, frais: 0, service: 0 } as any;
     const months = new Set<string>();
     let total = 0;
-    mine.forEach((p) => {
+    list.forEach((p: any) => {
       total += Number(p.amount) || 0;
       byType[p.type] = (byType[p.type] || 0) + (Number(p.amount) || 0);
       if (p.type === "mensualite" && p.mois) months.add(p.mois);

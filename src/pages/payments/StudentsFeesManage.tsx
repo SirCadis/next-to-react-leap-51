@@ -24,7 +24,8 @@ export default function StudentsFeesManage() {
 
   const students = useMemo<Eleve[]>(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("students") || "[]");
+      const { getStudents } = require("@/lib/students");
+      const saved = getStudents();
       if (!Array.isArray(saved)) return [];
       return saved
         .map((s: any) => ({
