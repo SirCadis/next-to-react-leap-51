@@ -1,0 +1,17 @@
+{
+  "name": "ecole-manager-electron",
+  "version": "1.0.0",
+  "description": "Application de gestion scolaire École Manager",
+  "main": "electron/main.js",
+  "homepage": "./",
+  "scripts": {
+    "electron": "electron .",
+    "electron:dev": "concurrently \"npm run dev\" \"node scripts/electron-dev.js\"",
+    "electron:build": "npm run build && electron-builder",
+    "electron:build:win": "npm run build && electron-builder --win",
+    "electron:build:mac": "npm run build && electron-builder --mac",
+    "electron:build:linux": "npm run build && electron-builder --linux"
+  },
+  "author": "École Manager",
+  "license": "MIT"
+}
